@@ -9,7 +9,7 @@ jwtOptions.secretOrKey = "secret"; //secret key
 
 const db = require("../util/database");
 
-//passport login jwr
+//passport login jwt
 const loginStrategy = new jwtStrategy(jwtOptions, function (jwt_payload, cb) {
   //   console.log("jwt_payload : ", jwt_payload);
   if (!jwt_payload) {
@@ -35,10 +35,10 @@ const loginStrategy = new jwtStrategy(jwtOptions, function (jwt_payload, cb) {
 passport.use(loginStrategy);
 
 //xac thuc thanh cong, luu user vao session
-passport.serializeUser(function (user, done) {
-  console.log("user", user);
-  done(null, user.email);
-});
+// passport.serializeUser(function (user, done) {
+//   console.log("user", user);
+//   done(null, user.email);
+// });
 
 //lay du lieu tu session luu vao req.session
 // passport.deserializeUser(function (userInfo, done) {
