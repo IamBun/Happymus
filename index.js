@@ -5,9 +5,32 @@ const cors = require("cors");
 const session = require("express-session");
 const passport = require("passport");
 const db = require("./util/database");
-const { writeFile } = require("fs");
+const multer = require("multer");
 
 require("./configs/passport");
+
+//config multer
+
+const fileStorage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "public/images");
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + file.originalname);
+  },
+});
+
+const fileFilter = (req, file, cb) => {
+  if (
+    file.mimetype === "image/png" ||
+    file.mimetype === "image/jpg" ||
+    file.mimetype === "image/jpeg"
+  ) {
+    cb(null, true);
+  } else {
+    cb(null, false);
+  }
+};
 
 const app = express();
 
@@ -22,16 +45,22 @@ app.use(
 app.use(express.urlencoded());
 app.use(express.json());
 
-app.use(cors());
-app.use(express.static(path.join(__dirname, "public")));
+app.use(cors({ origin: ["http://localhost:3000", "http://localhost:3001"] }));
 
-app.set("view engine", "ejs");
-app.set("views", "views");
+app.use(
+  multer({ storage: fileStorage, fileFilter: fileFilter }).array("images", 4)
+);
+app.use("/images", express.static(path.join(__dirname, "images")));
+app.use("/public", express.static(path.join(__dirname, "public")));
+
+// app.set("view engine", "ejs");
+// app.set("views", "views");
 
 // app.use(bodyParser.urlencoded());
 // app.use(bodyParser.json());
 const authRoute = require("./routes/auth");
 const chatRoute = require("./routes/chat");
+const socket = require("./socket.js");
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -45,7 +74,6 @@ app.use(function (err, req, res, next) {
   res.locals.message = err.message;
   // render the error page
   res.status(err.status || 500);
-  res.render("error");
 });
 
 const server = app.listen(3000, () => {
@@ -54,33 +82,60 @@ const server = app.listen(3000, () => {
 
 const io = require("./socket.js").init(server);
 
-//Ket noi socket
+// Ket noi socket
 io.on("connection", (socket) => {
-  console.log("Client connect !", socket.id);
+  // console.log("Client connect !", socket.id);
 
   //get 20 messages from client
   socket.on("getMessage", () => {
-    db.query("Select * FROM messages ORDER BY created DESC LIMIT 20")
+    db.query("Select * FROM messages ORDER BY msg_id DESC LIMIT 7")
       .then((result) => {
         return result[0];
       })
 
       .then((messages) => {
-        console.log("messages", messages);
+        //tra ve messages moi cho client
         io.emit("getMessage", messages);
       });
   });
 
   //Client sent message
   socket.on("message", (mess) => {
-    console.log("message", mess.enteredMessInputRef);
-    console.log("file", mess.enteredFile);
+    //luu message vao db
+    const message = mess.message;
+    db.query("INSERT INTO messages (message, uId_fk) VALUES (?,?)", [
+      mess.message,
+      mess.senderId,
+    ]);
 
-    writeFile("/images", mess.enteredFile);
     // send messages to client
-    io.emit("message", mess.enteredMessInputRef);
+
+    db.query("Select * FROM messages ORDER BY msg_id DESC LIMIT 7")
+      .then((result) => {
+        return result[0];
+      })
+
+      .then((messages) => {
+        // console.log("messages", messages);
+        io.emit("getMessage", messages);
+      });
+  });
+
+  //client send image
+  socket.on("image-send", (userId) => {
+    //tra ve message da co image luu
+    db.query("Select * FROM messages ORDER BY msg_id DESC LIMIT 7")
+      .then((result) => {
+        return result[0];
+      })
+
+      .then((messages) => {
+        // console.log("messages", messages);
+        io.emit("getMessage", messages);
+      });
   });
 });
+
 io.on("disconnect", (socket) => {
   console.log("Client disconnected !", socket.id);
 });
