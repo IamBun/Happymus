@@ -86,9 +86,9 @@ const io = require("./socket.js").init(server);
 io.on("connection", (socket) => {
   // console.log("Client connect !", socket.id);
 
-  //get 20 messages from client
+  //get 20 messages from client when start
   socket.on("getMessage", () => {
-    db.query("Select * FROM messages ORDER BY msg_id DESC LIMIT 7")
+    db.query("Select * FROM messages ORDER BY msg_id DESC LIMIT 20")
       .then((result) => {
         return result[0];
       })
@@ -110,7 +110,7 @@ io.on("connection", (socket) => {
 
     // send messages to client
 
-    db.query("Select * FROM messages ORDER BY msg_id DESC LIMIT 7")
+    db.query("Select * FROM messages ORDER BY msg_id DESC LIMIT 20")
       .then((result) => {
         return result[0];
       })
@@ -118,6 +118,21 @@ io.on("connection", (socket) => {
       .then((messages) => {
         // console.log("messages", messages);
         io.emit("getMessage", messages);
+      });
+  });
+
+  //loadmore messages
+  socket.on("loadmore", (currentMessagesLoad) => {
+    db.query(
+      "Select * FROM messages ORDER BY msg_id DESC LIMIT 20 OFFSET " +
+        currentMessagesLoad * 20
+    )
+      .then((result) => {
+        return result[0];
+      })
+      .then((messages) => {
+        // console.log("messages", messages);
+        io.emit("loadmore", messages);
       });
   });
 
