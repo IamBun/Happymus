@@ -22,19 +22,28 @@ exports.getAllUsers = async (req, res, next) => {
 //Tim Friend de ket ban
 exports.findFriends = async (req, res, next) => {
   const query = req.query.name.toLowerCase().trim();
-
+  const user = req.user;
   try {
+    //  const users = await db.query(
+    //    `SELECT id, email, first_name, last_name FROM users WHERE email LIKE '%${query}%' OR first_name LIKE '%${query}%' OR last_name LIKE '%${query}%'`
+    //  );
     const users = await db.query(
-      `SELECT id, email, first_name, last_name FROM users WHERE email LIKE '%${query}%' OR first_name LIKE '%${query}%' OR last_name LIKE '%${query}%'`
+      ` SELECT id, email, first_name, last_name FROM users WHERE users.id NOT IN ( SELECT friend_one FROM friends WHERE friend_two = ${user.id} AND accepted = 0 ) AND id NOT IN ( SELECT friend_one FROM friends WHERE friend_two = ${user.id} AND accepted =1) AND id NOT IN ( SELECT friend_two FROM friends WHERE friend_one = ${user.id} AND accepted =1) AND email LIKE '%${query}%' OR first_name LIKE '%${query}%' OR last_name LIKE '%${query}%'`
     );
-
-    //  console.log(users[0]);
     if (!users) {
       res.status(404).json("No users found");
       throw new Error("No user found !");
     }
 
     res.json(users[0]);
+
+    //  SELECT id, email, first_name, last_name FROM users WHERE users.id NOT IN
+    //USER REQUEST
+    //  ( SELECT friend_one FROM friends WHERE friend_two = 3236 AND accepted = 0 ) AND id NOT IN
+    // USER IS FRIEND
+    // ( SELECT friend_one FROM friends WHERE friend_two = 3236 AND accepted =1) AND id NOT IN
+    // ( SELECT friend_two FROM friends WHERE friend_one = 3236 AND accepted =1) AND
+    //  email LIKE '%bun%' OR first_name LIKE '%bun%' OR last_name LIKE '%bun%'
   } catch (error) {
     console.log(error);
   }
@@ -83,7 +92,7 @@ exports.acceptedFriend = async (req, res, next) => {
 //get FRIENDS list
 exports.getFriends = async (req, res, next) => {
   const user = req.user;
-  console.log(user);
+  //   console.log(user);
   try {
     if (!user) {
       res.status(404).json("No user found");
@@ -149,7 +158,7 @@ exports.getFriendRequest = async (req, res, next) => {
     const requests = result[0];
 
     if (requests.length == 0) {
-      res.json("You dont have friend request");
+      res.json({ message: "You dont have friend request" });
     }
 
     const requestsList = [];
@@ -157,13 +166,13 @@ exports.getFriendRequest = async (req, res, next) => {
     //get info tu id friend lay duoc
     for (let request of requests) {
       const result = await db.query(
-        `SELECT email FROM users WHERE id = ${requests.friend_one}`
+        `SELECT email, id FROM users WHERE id = ${request.friend_one}`
       );
       // console.log("info", result[0]);
       const info = result[0][0];
       requestsList.push(info);
     }
-    res.json(requestsList);
+    res.json({ requestsList });
   } catch (error) {
     next(error);
   }
