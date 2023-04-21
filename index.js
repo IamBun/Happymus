@@ -58,9 +58,10 @@ app.use("/public", express.static(path.join(__dirname, "public")));
 
 // app.use(bodyParser.urlencoded());
 // app.use(bodyParser.json());
+// const socket = require("./socket.js");
 const authRoute = require("./routes/auth");
 const chatRoute = require("./routes/chat");
-const socket = require("./socket.js");
+const userRoute = require("./routes/user");
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -69,6 +70,9 @@ app.use("/auth", authRoute);
 
 app.use("/chat", chatRoute);
 
+app.use("/user", userRoute);
+
+// catch errors
 app.use(function (err, req, res, next) {
   // set locals, only providing error in development
   res.locals.message = err.message;
@@ -139,7 +143,7 @@ io.on("connection", (socket) => {
   //client send image
   socket.on("image-send", (userId) => {
     //tra ve message da co image luu
-    db.query("Select * FROM messages ORDER BY msg_id DESC LIMIT 7")
+    db.query("Select * FROM messages ORDER BY msg_id DESC LIMIT 20")
       .then((result) => {
         return result[0];
       })

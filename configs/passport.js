@@ -23,8 +23,13 @@ const loginStrategy = new jwtStrategy(jwtOptions, function (jwt_payload, cb) {
     })
     .then((arr) => {
       if (arr) {
-        //   console.log("user", user);
-        let user = { ...arr[0] };
+        let user = {
+          id: arr[0].id,
+          email: arr[0].email,
+          lastname: arr[0].last_name,
+          firstname: arr[0].first_name,
+        };
+        // console.log("user", user);
         cb(null, user);
       } else {
         cb(null, false);

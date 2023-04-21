@@ -32,24 +32,7 @@ router.post(
   }
 );
 
-// router.get(
-//   "/images/:imageId",
-//   passport.authenticate("jwt", { session: false }),
 
-//   (req, res) => {
-//     const imageId = req.params.imageId;
-//     console.log(req.params.imageId);
-//     //Lay ra image moi nhat vua upload
-//     db.query("select * from user_uploads WHERE id = (?) ", [imageId])
-//       .then((results) => {
-//         // console.log(results[0]);
-//         return results[0];
-//       })
-//       .then((images) => {
-//         res.json(images);
-//       });
-//   }
-// );
 
 router.get(
   "/",
