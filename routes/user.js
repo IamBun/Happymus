@@ -22,7 +22,6 @@ router.get(
 module.exports = router;
 
 //request add friends
-
 router.post(
   "/addfriend",
   passport.authenticate("jwt", { session: false }),
@@ -36,13 +35,14 @@ router.post(
   userController.acceptedFriend
 );
 
-//request get all friends
+//get all request
 router.get(
   "/requests",
   passport.authenticate("jwt", { session: false }),
   userController.getFriendRequest
 );
 
+//get all friends in friend list
 router.get(
   "/friends",
   passport.authenticate("jwt", { session: false }),

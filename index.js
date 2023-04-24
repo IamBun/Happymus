@@ -62,6 +62,7 @@ app.use("/public", express.static(path.join(__dirname, "public")));
 const authRoute = require("./routes/auth");
 const chatRoute = require("./routes/chat");
 const userRoute = require("./routes/user");
+const postRoute = require("./routes/post");
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -71,6 +72,8 @@ app.use("/auth", authRoute);
 app.use("/chat", chatRoute);
 
 app.use("/user", userRoute);
+
+app.use("/post", postRoute);
 
 // catch errors
 app.use(function (err, req, res, next) {
@@ -110,7 +113,7 @@ io.on("connection", (socket) => {
   //Client sent message
   socket.on("message", (mess) => {
     //luu message vao db
-    const message = mess.message;
+    // const message = mess.message;
     db.query("INSERT INTO messages (message, uId_fk) VALUES (?,?)", [
       mess.message,
       mess.senderId,
