@@ -88,7 +88,11 @@ const io = require("./socket.js").init(server);
 
 // Ket noi socket
 io.on("connection", (socket) => {
-  // console.log("Client connect !", socket.id);
+  //setup when login
+  socket.on("setup", (userId) => {
+    socket.join(userId);
+    console.log(userId);
+  });
 
   //get 20 messages from client when start
   socket.on("getMessage", () => {
@@ -153,6 +157,12 @@ io.on("connection", (socket) => {
         io.emit("getMessage", messages);
       });
   });
+
+  //ADD FRIEND REQUEST
+  socket.on("addfriend", (friendId) => io.to(friendId).emit("friendrequest"));
+  socket.on("acceptFriendRequest", (id) =>
+    io.to(id.userRequestID).to(id.you).emit("acceptFriendRequest")
+  );
 });
 
 io.on("disconnect", (socket) => {
