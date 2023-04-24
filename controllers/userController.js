@@ -74,16 +74,29 @@ exports.addFriend = async (req, res, next) => {
 exports.acceptedFriend = async (req, res, next) => {
   const user = req.user;
   const userRequestID = req.query.userRequestID;
+  const isAccept = req.query.isAccept;
+  // console.log(isAccept);
   try {
     if (!user) {
       res.status(404).json("No user found");
       throw new Error("No user found!");
     }
-    await db.query(
-      "UPDATE friends SET accepted = 1 WHERE friend_two = ? AND friend_one = ?",
-      [user.id, userRequestID]
-    );
-    res.json("Friend request Accepted");
+    //ACCEPT request
+    if (isAccept == 1) {
+      await db.query(
+        "UPDATE friends SET accepted = 1 WHERE friend_two = ? AND friend_one = ?",
+        [user.id, userRequestID]
+      );
+      return res.json("Friend request Accepted !");
+    }
+    //DONT ACCEPT, DELETE REQUEST
+    if (isAccept == 0) {
+      await db.query(
+        "DELETE FROM friends WHERE friend_two = ? AND friend_one = ?",
+        [user.id, userRequestID]
+      );
+      return res.json("Friend request Cancelled !");
+    }
   } catch (error) {
     next(error);
   }
