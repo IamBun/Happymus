@@ -57,6 +57,7 @@ exports.createPost = async (req, res, next) => {
   const files = req.files;
   const privacy = req.body.privacy || 0;
   const imageIds = [];
+
   try {
     if (!userId) {
       res.status(404).json("No users found");
@@ -95,42 +96,165 @@ exports.createPost = async (req, res, next) => {
   }
 };
 
+//FUNCTIONS GET MORE POST
 exports.getMorePosts = async (userId, lastPostId) => {
-  // const query = 'SELECT * FROM posts WHERE user_id = ' + userId + ""
-  const posts = await db.query(
-    "SELECT * FROM posts WHERE user_Id = " +
-      userId +
-      " AND id <" +
-      lastPostId +
-      " ORDER BY posts.id DESC LIMIT 20 "
-  );
+  try {
+    const posts = await db.query(
+      "SELECT * FROM posts WHERE user_Id = " +
+        userId +
+        " AND id <" +
+        lastPostId +
+        " ORDER BY posts.id DESC LIMIT 20 "
+    );
 
-  if (!posts) {
-    console.log("No posts found");
-    return { message: "No posts found" };
-  }
-  const result = posts[0];
-  for (let i = 0; i < result.length; i++) {
-    //Neu co Image
-    if (result[i].image_id) {
-      //Lay ra mang ID
-      const imageIds = result[i].image_id.split(",");
-      //   console.log(imageIds);
-      // Tao mang de luu path
-      const imageArray = [];
-      //query ID de lay ra path
-      for (let image of imageIds) {
-        const imagePath = await db.query(
-          "SELECT file_path from user_uploads WHERE id =" + image
-        );
-        //  console.log("imagePath", imagePath[0][0].file_path);
-        //them path vao
-        imageArray.push(imagePath[0][0].file_path);
-      }
-      //them path vao mang ket qua
-      result[i]["imageArray"] = imageArray;
+    if (!posts) {
+      console.log("No posts found");
+      return { message: "No posts found" };
     }
+    const result = posts[0];
+    for (let i = 0; i < result.length; i++) {
+      //Neu co Image
+      if (result[i].image_id) {
+        //Lay ra mang ID
+        const imageIds = result[i].image_id.split(",");
+        //   console.log(imageIds);
+        // Tao mang de luu path
+        const imageArray = [];
+        //query ID de lay ra path
+        for (let image of imageIds) {
+          const imagePath = await db.query(
+            "SELECT file_path from user_uploads WHERE id =" + image
+          );
+          //  console.log("imagePath", imagePath[0][0].file_path);
+          //them path vao
+          imageArray.push(imagePath[0][0].file_path);
+        }
+        //them path vao mang ket qua
+        result[i]["imageArray"] = imageArray;
+      }
+    }
+    //   console.log("result", result);
+    return result;
+  } catch (error) {
+    console.log(error);
   }
-  //   console.log("result", result);
-  return result;
+};
+
+exports.getUserPost = async (req, res, next) => {
+  const userId = req.user.id;
+  const ownerPostId = req.params.id; //Lay ra id owner post
+
+  try {
+    if (!userId) {
+      res.status(404).json("No users found");
+      throw new Error("No user found !");
+    }
+
+    //privacy = 0 : public || privacy = 2 va la ban be cua nhau
+    const posts = await db.query(
+      "SELECT * FROM posts WHERE user_id = " +
+        ownerPostId +
+        " AND privacy = '0' OR ( user_id =" +
+        ownerPostId +
+        " AND privacy = '2' AND user_id IN (SELECT friend_one FROM friends WHERE friend_two =" +
+        userId +
+        " AND friend_one =" +
+        ownerPostId +
+        " AND accepted =1) OR user_id IN (SELECT friend_two FROM friends WHERE friend_one =" +
+        userId +
+        " AND friend_two = " +
+        ownerPostId +
+        " AND accepted =1))" +
+        " ORDER BY posts.id DESC LIMIT 20"
+    );
+
+    if (!posts) {
+      console.log("No posts found");
+      return res.json({ message: "No posts found" });
+    }
+    const result = posts[0];
+    for (let i = 0; i < result.length; i++) {
+      //Neu co Image
+      if (result[i].image_id) {
+        //Lay ra mang ID
+        const imageIds = result[i].image_id.split(",");
+        //   console.log(imageIds);
+        // Tao mang de luu path
+        const imageArray = [];
+        //query ID de lay ra path
+        for (let image of imageIds) {
+          const imagePath = await db.query(
+            "SELECT file_path from user_uploads WHERE id =" + image
+          );
+          //  console.log("imagePath", imagePath[0][0].file_path);
+          //them path vao
+          imageArray.push(imagePath[0][0].file_path);
+        }
+        //them path vao mang ket qua
+        result[i]["imageArray"] = imageArray;
+      }
+    }
+    //  console.log(result);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+exports.getMoreUserPosts = async (userId, ownerPostId, lastPostId) => {
+  try {
+    const posts = await db.query(
+      "SELECT * FROM posts WHERE user_id = " +
+        ownerPostId +
+        " AND id < " +
+        lastPostId +
+        " AND privacy = '0' OR ( user_id =" +
+        ownerPostId +
+        " AND id < " +
+        lastPostId +
+        " AND privacy = '2' AND user_id IN (SELECT friend_one FROM friends WHERE friend_two =" +
+        userId +
+        " AND friend_one =" +
+        ownerPostId +
+        " AND accepted =1) OR user_id IN (SELECT friend_two FROM friends WHERE friend_one =" +
+        userId +
+        " AND friend_two = " +
+        ownerPostId +
+        " AND accepted =1))" +
+        " AND id < " +
+        lastPostId +
+        " ORDER BY posts.id DESC LIMIT 20"
+    );
+
+    if (!posts) {
+      console.log("No posts found");
+      return { message: "No posts found" };
+    }
+    const result = posts[0];
+    for (let i = 0; i < result.length; i++) {
+      //Neu co Image
+      if (result[i].image_id) {
+        //Lay ra mang ID
+        const imageIds = result[i].image_id.split(",");
+        //   console.log(imageIds);
+        // Tao mang de luu path
+        const imageArray = [];
+        //query ID de lay ra path
+        for (let image of imageIds) {
+          const imagePath = await db.query(
+            "SELECT file_path from user_uploads WHERE id =" + image
+          );
+          //  console.log("imagePath", imagePath[0][0].file_path);
+          //them path vao
+          imageArray.push(imagePath[0][0].file_path);
+        }
+        //them path vao mang ket qua
+        result[i]["imageArray"] = imageArray;
+      }
+    }
+    //  console.log(result);
+    return result;
+  } catch (error) {
+    console.log(error);
+  }
 };

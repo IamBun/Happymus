@@ -10,7 +10,10 @@ const multer = require("multer");
 require("./configs/passport");
 
 //config multer
-const { getPosts, getMorePosts } = require("./controllers/postController");
+const {
+  getMoreUserPosts,
+  getMorePosts,
+} = require("./controllers/postController");
 const fileStorage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, "public/images");
@@ -173,8 +176,19 @@ io.on("connection", (socket) => {
 
   socket.on("loadMorePost", async (data) => {
     // console.log("last Mess ID", data.lastMessageId);
-    const posts = await getMorePosts(data.userId, data.lastMessageId);
+    const posts = await getMorePosts(data.userId, data.lastPostId);
     io.to(data.userId).emit("loadMorePost", posts);
+  });
+
+  //LOAD MORE POST FROM USER
+  socket.on("getMoreUserPosts", async (data) => {
+    const posts = await getMoreUserPosts(
+      data.userId,
+      data.ownerPostId,
+      data.lastPostId
+    );
+
+    io.to(data.userId).emit("getMoreUserPosts", posts);
   });
 });
 

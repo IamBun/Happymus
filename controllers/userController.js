@@ -124,7 +124,7 @@ exports.getFriends = async (req, res, next) => {
       //get info tu id friend lay duoc
       for (let friend of friends) {
         const result = await db.query(
-          `SELECT email FROM users WHERE id = ${friend.friend_two}`
+          `SELECT id,email FROM users WHERE id = ${friend.friend_two}`
         );
         // console.log("info", result[0]);
         const info = result[0][0];
@@ -142,7 +142,7 @@ exports.getFriends = async (req, res, next) => {
       //get info tu id friend lay duoc
       for (let friend of friends2) {
         const result = await db.query(
-          `SELECT email FROM users WHERE id = ${friend.friend_one}`
+          `SELECT id,email FROM users WHERE id = ${friend.friend_one}`
         );
         // console.log("info", result[0]);
         const info = result[0][0];
