@@ -4,6 +4,13 @@ const passport = require("passport");
 
 const postController = require("../controllers/postController");
 
+//GET NEWSFEED
+router.get(
+  "/newsfeed",
+  passport.authenticate("jwt", { session: false }),
+  postController.getNewsFeed
+);
+
 //GET USER POST
 router.get(
   "/user/:id",

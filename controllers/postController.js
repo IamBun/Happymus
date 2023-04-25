@@ -1,9 +1,8 @@
 const db = require("../util/database");
 
-//TAO THEM QUERY DE LUU ANH NEU POST CO ANH
+//owner get my post
 exports.getPosts = async (req, res, next) => {
   const userId = req.user.id;
-  const page = req.query.page ? req.query.page : 0;
   //   console.log(userId);
   try {
     if (!userId) {
@@ -12,10 +11,12 @@ exports.getPosts = async (req, res, next) => {
     }
 
     const posts = await db.query(
-      "SELECT * FROM posts WHERE user_Id = " +
+      //PIVOT LA BANG LAY RA POST CUA USER, JOIN VOI USERS DE LAY RA THONG TIN USER
+      "SELECT users.email, users.last_name, users.first_name, PIVOT.* FROM (" +
+        "SELECT * FROM posts WHERE user_Id = " +
         userId +
-        " ORDER BY posts.id DESC LIMIT 20 OFFSET " +
-        page * 5
+        " ORDER BY posts.id DESC LIMIT 20  ) AS PIVOT" +
+        " JOIN users ON PIVOT.user_Id = users.id"
     );
 
     if (!posts) {
@@ -100,11 +101,13 @@ exports.createPost = async (req, res, next) => {
 exports.getMorePosts = async (userId, lastPostId) => {
   try {
     const posts = await db.query(
-      "SELECT * FROM posts WHERE user_Id = " +
+      //PIVOT LA BANG LAY RA POST CUA USER CO ID < LASTPOSTID DE LAY THEM, JOIN VOI USERS DE LAY RA THONG TIN USER
+      "SELECT users.email, users.last_name, users.first_name, PIVOT.* FROM ( SELECT * FROM posts WHERE user_Id = " +
         userId +
         " AND id <" +
         lastPostId +
-        " ORDER BY posts.id DESC LIMIT 20 "
+        " ORDER BY posts.id DESC LIMIT 20 ) AS PIVOT" +
+        " JOIN users ON PIVOT.user_Id = users.id"
     );
 
     if (!posts) {
@@ -152,7 +155,7 @@ exports.getUserPost = async (req, res, next) => {
 
     //privacy = 0 : public || privacy = 2 va la ban be cua nhau
     const posts = await db.query(
-      "SELECT * FROM posts WHERE user_id = " +
+      "SELECT users.email, users.last_name, users.first_name, PIVOT.* FROM (SELECT * FROM posts WHERE user_id = " +
         ownerPostId +
         " AND privacy = '0' OR ( user_id =" +
         ownerPostId +
@@ -165,7 +168,8 @@ exports.getUserPost = async (req, res, next) => {
         " AND friend_two = " +
         ownerPostId +
         " AND accepted =1))" +
-        " ORDER BY posts.id DESC LIMIT 20"
+        " ORDER BY posts.id DESC LIMIT 20 ) AS PIVOT" +
+        " JOIN users ON PIVOT.user_Id = users.id"
     );
 
     if (!posts) {
@@ -204,7 +208,7 @@ exports.getUserPost = async (req, res, next) => {
 exports.getMoreUserPosts = async (userId, ownerPostId, lastPostId) => {
   try {
     const posts = await db.query(
-      "SELECT * FROM posts WHERE user_id = " +
+      "SELECT users.email, users.last_name, users.first_name, PIVOT.* FROM (SELECT * FROM posts WHERE user_id = " +
         ownerPostId +
         " AND id < " +
         lastPostId +
@@ -223,7 +227,8 @@ exports.getMoreUserPosts = async (userId, ownerPostId, lastPostId) => {
         " AND accepted =1))" +
         " AND id < " +
         lastPostId +
-        " ORDER BY posts.id DESC LIMIT 20"
+        " ORDER BY posts.id DESC LIMIT 20 ) AS PIVOT" +
+        " JOIN users ON PIVOT.user_Id = users.id"
     );
 
     if (!posts) {
@@ -256,5 +261,57 @@ exports.getMoreUserPosts = async (userId, ownerPostId, lastPostId) => {
     return result;
   } catch (error) {
     console.log(error);
+  }
+};
+
+//GET NEWSFEED
+//BAI VIET CUA MINH
+// TIM KIEM BAN BE CUA MINH
+//TIM BAI VIET TU ID BAN BE DO
+
+exports.getNewsFeed = async (req, res, next) => {
+  const userId = req.user.id;
+  try {
+    //TIM LIST BAN BE
+    const listFriendIds = [];
+    //friend you send request
+    const friend1 = await db.query(
+      "SELECT friend_two FROM friends WHERE friend_one = ? AND accepted =1",
+      [userId]
+    );
+    if (friend1.length > 0) {
+      for (let friend of friend1[0]) {
+        listFriendIds.push(friend.friend_two);
+      }
+    }
+    //friend send request for you
+    const friend2 = await db.query(
+      "SELECT friend_one FROM friends WHERE friend_two = ? AND accepted =1",
+      [userId]
+    );
+    if (friend2.length > 0) {
+      for (let friend of friend2[0]) {
+        listFriendIds.push(friend.friend_one);
+      }
+    }
+
+    const posts = await db.query(
+      //PIVOT LA BANG LAY RA POST CUA USER CO ID < LASTPOSTID DE LAY THEM, JOIN VOI USERS DE LAY RA THONG TIN USER
+      "SELECT users.email, users.last_name, users.first_name, PIVOT.* FROM ( SELECT * FROM posts WHERE user_id = " +
+        userId +
+        //BAI VIET CUA BAN BE O CHE DO PUBLIC HOAC BAN BE O CHE DO BAN BE
+        " OR ( user_id IN (" +
+        listFriendIds.join(",") +
+        ") AND privacy = 0 )  OR ( user_id IN (" +
+        listFriendIds.join(",") +
+        ") AND privacy = 2 )" +
+        " ORDER BY posts.id DESC LIMIT 20 ) AS PIVOT" +
+        " JOIN users ON PIVOT.user_Id = users.id"
+    );
+
+    //  console.log("posts", posts[0]);
+    res.json(posts[0]);
+  } catch (error) {
+    next(error);
   }
 };
