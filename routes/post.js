@@ -15,4 +15,5 @@ router.get(
   passport.authenticate("jwt", { session: false }),
   postController.getPosts
 );
+
 module.exports = router;
