@@ -98,7 +98,6 @@ io.on("connection", (socket) => {
   //setup when login
   socket.on("setup", (userId) => {
     socket.join(userId);
-    console.log(userId);
   });
 
   //get 20 messages from client when start
@@ -194,7 +193,6 @@ io.on("connection", (socket) => {
 
   socket.on("loadMoreNewsFeed", async (data) => {
     const posts = await getMoreNewsFeed(data.userId, data.lastPostId);
-    console.log(posts);
     io.to(data.userId).emit("loadMoreNewsFeed", posts);
   });
 });

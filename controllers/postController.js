@@ -20,7 +20,6 @@ exports.getPosts = async (req, res, next) => {
     );
 
     if (!posts) {
-      console.log("No posts found");
       res.json({ message: "No posts found" });
     }
     const result = posts[0];
@@ -46,7 +45,7 @@ exports.getPosts = async (req, res, next) => {
       }
     }
     //  console.log(result);
-    res.json(result);
+    return res.json(result);
   } catch (error) {
     next(error);
   }
@@ -111,7 +110,6 @@ exports.getMorePosts = async (userId, lastPostId) => {
     );
 
     if (!posts) {
-      console.log("No posts found");
       return { message: "No posts found" };
     }
     const result = posts[0];
@@ -173,7 +171,6 @@ exports.getUserPost = async (req, res, next) => {
     );
 
     if (!posts) {
-      console.log("No posts found");
       return res.json({ message: "No posts found" });
     }
     const result = posts[0];
@@ -199,7 +196,7 @@ exports.getUserPost = async (req, res, next) => {
       }
     }
     //  console.log(result);
-    res.json(result);
+    return res.json(result);
   } catch (error) {
     next(error);
   }
@@ -232,7 +229,6 @@ exports.getMoreUserPosts = async (userId, ownerPostId, lastPostId) => {
     );
 
     if (!posts) {
-      console.log("No posts found");
       return { message: "No posts found" };
     }
     const result = posts[0];
@@ -309,8 +305,35 @@ exports.getNewsFeed = async (req, res, next) => {
         " JOIN users ON PIVOT.user_Id = users.id"
     );
 
-    //  console.log("posts", posts[0]);
-    res.json(posts[0]);
+    if (!posts) {
+      return { message: "No posts found" };
+    }
+    const result = posts[0];
+    for (let i = 0; i < result.length; i++) {
+      //Neu co Image
+      if (result[i].image_id) {
+        //Lay ra mang ID
+        const imageIds = result[i].image_id.split(",");
+        //   console.log(imageIds);
+        // Tao mang de luu path
+        const imageArray = [];
+        //query ID de lay ra path
+        for (let image of imageIds) {
+          const imagePath = await db.query(
+            "SELECT file_path from user_uploads WHERE id =" + image
+          );
+          //  console.log("imagePath", imagePath[0][0].file_path);
+          //them path vao
+          imageArray.push(imagePath[0][0].file_path);
+        }
+        //them path vao mang ket qua
+        result[i]["imageArray"] = imageArray;
+      }
+    }
+    //  console.log(result);
+    //  return result;
+
+    return res.json(result);
   } catch (error) {
     next(error);
   }
@@ -357,7 +380,33 @@ exports.getMoreNewsFeed = async (userId, lastPostId) => {
     );
 
     //  console.log("posts", posts[0]);
-    return posts[0];
+    if (!posts) {
+      return { message: "No posts found" };
+    }
+    const result = posts[0];
+    for (let i = 0; i < result.length; i++) {
+      //Neu co Image
+      if (result[i].image_id) {
+        //Lay ra mang ID
+        const imageIds = result[i].image_id.split(",");
+        //   console.log(imageIds);
+        // Tao mang de luu path
+        const imageArray = [];
+        //query ID de lay ra path
+        for (let image of imageIds) {
+          const imagePath = await db.query(
+            "SELECT file_path from user_uploads WHERE id =" + image
+          );
+          //  console.log("imagePath", imagePath[0][0].file_path);
+          //them path vao
+          imageArray.push(imagePath[0][0].file_path);
+        }
+        //them path vao mang ket qua
+        result[i]["imageArray"] = imageArray;
+      }
+    }
+
+    return result;
   } catch (error) {
     console.log(error);
   }
