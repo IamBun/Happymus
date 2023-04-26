@@ -296,7 +296,7 @@ exports.getNewsFeed = async (req, res, next) => {
     }
 
     const posts = await db.query(
-      //PIVOT LA BANG LAY RA POST CUA USER CO ID < LASTPOSTID DE LAY THEM, JOIN VOI USERS DE LAY RA THONG TIN USER
+      //PIVOT LA BANG LAY RA POST CUA USER, JOIN VOI USERS DE LAY RA THONG TIN USER
       "SELECT users.email, users.last_name, users.first_name, PIVOT.* FROM ( SELECT * FROM posts WHERE user_id = " +
         userId +
         //BAI VIET CUA BAN BE O CHE DO PUBLIC HOAC BAN BE O CHE DO BAN BE
@@ -313,5 +313,52 @@ exports.getNewsFeed = async (req, res, next) => {
     res.json(posts[0]);
   } catch (error) {
     next(error);
+  }
+};
+
+exports.getMoreNewsFeed = async (userId, lastPostId) => {
+  try {
+    //TIM LIST BAN BE
+    const listFriendIds = [];
+    //friend you send request
+    const friend1 = await db.query(
+      "SELECT friend_two FROM friends WHERE friend_one = ? AND accepted =1",
+      [userId]
+    );
+    if (friend1.length > 0) {
+      for (let friend of friend1[0]) {
+        listFriendIds.push(friend.friend_two);
+      }
+    }
+    //friend send request for you
+    const friend2 = await db.query(
+      "SELECT friend_one FROM friends WHERE friend_two = ? AND accepted =1",
+      [userId]
+    );
+    if (friend2.length > 0) {
+      for (let friend of friend2[0]) {
+        listFriendIds.push(friend.friend_one);
+      }
+    }
+
+    const posts = await db.query(
+      //PIVOT LA BANG LAY RA POST CUA USER, JOIN VOI USERS DE LAY RA THONG TIN USER
+      "SELECT users.email, users.last_name, users.first_name, PIVOT.* FROM ( SELECT * FROM posts WHERE ( user_id = " +
+        userId +
+        //BAI VIET CUA BAN BE O CHE DO PUBLIC HOAC BAN BE O CHE DO BAN BE
+        " OR ( user_id IN (" +
+        listFriendIds.join(",") +
+        ") AND privacy = 0 )  OR ( user_id IN (" +
+        listFriendIds.join(",") +
+        ") AND privacy = 2 )) AND posts.id <" +
+        lastPostId +
+        " ORDER BY posts.id DESC LIMIT 20 ) AS PIVOT" +
+        " JOIN users ON PIVOT.user_Id = users.id"
+    );
+
+    //  console.log("posts", posts[0]);
+    return posts[0];
+  } catch (error) {
+    console.log(error);
   }
 };

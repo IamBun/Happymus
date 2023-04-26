@@ -33,7 +33,7 @@ exports.postLogin = async (req, res, next) => {
   const email = req.body.email;
   const password = req.body.password;
 
-  console.log(req.body.email);
+  // console.log(req.body.email);
 
   try {
     const result = await db.query(
@@ -47,16 +47,24 @@ exports.postLogin = async (req, res, next) => {
     }
 
     const userPass = await db.query(
-      "SELECT password FROM users WHERE email = ?",
+      "SELECT email,password,last_name,first_name, id FROM users WHERE email = ?",
       [email]
     );
-    // console.log(userPass[0][0]);
+    // console.log(userPass[0][0].password);
     const passwordhashed = userPass[0][0].password;
     const comparePass = await bcrypt.compare(password, passwordhashed);
 
     if (comparePass) {
-      const token = jwt.sign({ email }, "secret");
-      return res.json({ token });
+      const token = jwt.sign({ email, id: userPass[0][0].id }, "secret");
+      // console.log(userPass[0][0]);
+
+      return res.json({
+        userId: userPass[0][0].id,
+        email: userPass[0][0].email,
+        last_name: userPass[0][0].last_name,
+        first_name: userPass[0][0].first_name,
+        token: token,
+      });
     } else {
       res.json("Password is wrong !");
       throw new Error("Password is wrong !");

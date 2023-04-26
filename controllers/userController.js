@@ -28,7 +28,7 @@ exports.findFriends = async (req, res, next) => {
     //    `SELECT id, email, first_name, last_name FROM users WHERE email LIKE '%${query}%' OR first_name LIKE '%${query}%' OR last_name LIKE '%${query}%'`
     //  );
     const users = await db.query(
-      ` SELECT id, email, first_name, last_name FROM users WHERE users.id NOT IN ( SELECT friend_one FROM friends WHERE friend_two = ${user.id} AND accepted = 0 ) AND id NOT IN ( SELECT friend_one FROM friends WHERE friend_two = ${user.id} AND accepted =1) AND id NOT IN ( SELECT friend_two FROM friends WHERE friend_one = ${user.id} AND accepted =1) AND email LIKE '%${query}%' OR first_name LIKE '%${query}%' OR last_name LIKE '%${query}%'`
+      ` SELECT id, email, first_name, last_name FROM users WHERE users.id <> ${user.id} AND users.id NOT IN ( SELECT friend_one FROM friends WHERE friend_two = ${user.id} AND accepted = 0 ) AND id NOT IN ( SELECT friend_one FROM friends WHERE friend_two = ${user.id} AND accepted =1) AND id NOT IN ( SELECT friend_two FROM friends WHERE friend_one = ${user.id} AND accepted =1) AND email LIKE '%${query}%' OR first_name LIKE '%${query}%' OR last_name LIKE '%${query}%'`
     );
     if (!users) {
       res.status(404).json("No users found");

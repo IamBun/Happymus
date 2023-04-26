@@ -30,6 +30,7 @@ const loginStrategy = new jwtStrategy(jwtOptions, function (jwt_payload, cb) {
           firstname: arr[0].first_name,
         };
         // console.log("user", user);
+        // Luu user nay vao req, goi next den middleware tiep theo
         cb(null, user);
       } else {
         cb(null, false);
