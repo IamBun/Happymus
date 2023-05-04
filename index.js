@@ -67,6 +67,7 @@ const authRoute = require("./routes/auth");
 const chatRoute = require("./routes/chat");
 const userRoute = require("./routes/user");
 const postRoute = require("./routes/post");
+const socket = require("./socket.js");
 
 app.use(passport.initialize());
 app.use(passport.session());
@@ -80,11 +81,11 @@ app.use("/user", userRoute);
 app.use("/post", postRoute);
 
 // catch errors
-app.use(function (err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  // render the error page
-  res.status(err.status || 500);
+app.use(function (error, req, res, next) {
+  const status = error.statusCode || 500;
+  const message = error.message;
+  const data = error.data;
+  res.status(status).json({ message: message, data: data });
 });
 
 const server = app.listen(3000, () => {
@@ -98,6 +99,7 @@ io.on("connection", (socket) => {
   //setup when login
   socket.on("setup", (userId) => {
     socket.join(userId);
+    console.log(userId);
   });
 
   //get 20 messages from client when start
@@ -195,6 +197,21 @@ io.on("connection", (socket) => {
     const posts = await getMoreNewsFeed(data.userId, data.lastPostId);
     io.to(data.userId).emit("loadMoreNewsFeed", posts);
   });
+
+  // user send message
+  socket.on("newusermessage", (data) => {
+    // console.log(data);
+    io.to(data.message[0].receiverid).emit("newusermessage", data);
+  });
+
+  // WHEN USER SEND NEW MESSAGE, RENDER CHATBOX IN SENDER
+  // socket.on("sendNewMessage", async (data) => {
+  //   console.log("data", data);
+  //   io.to(data.message[0].senderid).emit(
+  //     "sendNewMessage",
+  //     await data.message[0]
+  //   );
+  // });
 });
 
 io.on("disconnect", (socket) => {

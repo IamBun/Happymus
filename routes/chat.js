@@ -24,4 +24,18 @@ router.get(
     res.json({ email, id });
   }
 );
+
+//getMessages
+router.get(
+  "/allmessages",
+  passport.authenticate("jwt", { session: false }),
+  chatController.getAllMessages
+);
+
+//new message
+router.post(
+  "/newmessage",
+  passport.authenticate("jwt", { session: false }),
+  chatController.newMessage
+);
 module.exports = router;

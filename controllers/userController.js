@@ -14,6 +14,9 @@ exports.getAllUsers = async (req, res, next) => {
 
     res.json(users[0]);
   } catch (error) {
+    if (!error.statusCode) {
+      error.statusCode = 500;
+    }
     next(error);
   }
   //   console.log("users", users);
@@ -24,15 +27,13 @@ exports.findFriends = async (req, res, next) => {
   const query = req.query.name.toLowerCase().trim();
   const user = req.user;
   try {
-    //  const users = await db.query(
-    //    `SELECT id, email, first_name, last_name FROM users WHERE email LIKE '%${query}%' OR first_name LIKE '%${query}%' OR last_name LIKE '%${query}%'`
-    //  );
     const users = await db.query(
       ` SELECT id, email, first_name, last_name FROM users WHERE users.id <> ${user.id} AND users.id NOT IN ( SELECT friend_one FROM friends WHERE friend_two = ${user.id} AND accepted = 0 ) AND id NOT IN ( SELECT friend_one FROM friends WHERE friend_two = ${user.id} AND accepted =1) AND id NOT IN ( SELECT friend_two FROM friends WHERE friend_one = ${user.id} AND accepted =1) AND email LIKE '%${query}%' OR first_name LIKE '%${query}%' OR last_name LIKE '%${query}%'`
     );
     if (!users) {
-      res.status(404).json("No users found");
-      throw new Error("No user found !");
+      const error = new Error("No user found !");
+      error.statusCode = 404;
+      throw error;
     }
 
     res.json(users[0]);
@@ -44,8 +45,11 @@ exports.findFriends = async (req, res, next) => {
     // ( SELECT friend_one FROM friends WHERE friend_two = 3236 AND accepted =1) AND id NOT IN
     // ( SELECT friend_two FROM friends WHERE friend_one = 3236 AND accepted =1) AND
     //  email LIKE '%bun%' OR first_name LIKE '%bun%' OR last_name LIKE '%bun%'
-  } catch (error) {
-    console.log(error);
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
   }
 };
 
@@ -53,20 +57,18 @@ exports.findFriends = async (req, res, next) => {
 exports.addFriend = async (req, res, next) => {
   const user = req.user;
   const friendId = req.query.friendId;
-  //   console.log("user", user.id, user.email, user.firstName, user.lastName);
-  //   console.log("friendId", friendId);
+
   try {
-    if (!user) {
-      res.status(404).json("No user found");
-      throw new Error("No user found!");
-    }
     await db.query("INSERT INTO friends(friend_one, friend_two) VALUES (?,?)", [
       user.id,
       friendId,
     ]);
-    res.json("Add friend request send !");
-  } catch (error) {
-    next(error);
+    res.status(200).json("Add friend request send !");
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
   }
 };
 
@@ -75,19 +77,15 @@ exports.acceptedFriend = async (req, res, next) => {
   const user = req.user;
   const userRequestID = req.query.userRequestID;
   const isAccept = req.query.isAccept;
-  // console.log(isAccept);
+
   try {
-    if (!user) {
-      res.status(404).json("No user found");
-      throw new Error("No user found!");
-    }
     //ACCEPT request
     if (isAccept == 1) {
       await db.query(
         "UPDATE friends SET accepted = 1 WHERE friend_two = ? AND friend_one = ?",
         [user.id, userRequestID]
       );
-      return res.json("Friend request Accepted !");
+      return res.status(200).json("Friend request Accepted !");
     }
     //DONT ACCEPT, DELETE REQUEST
     if (isAccept == 0) {
@@ -95,23 +93,20 @@ exports.acceptedFriend = async (req, res, next) => {
         "DELETE FROM friends WHERE friend_two = ? AND friend_one = ?",
         [user.id, userRequestID]
       );
-      return res.json("Friend request Cancelled !");
+      return res.status(200).json("Friend request Cancelled !");
     }
-  } catch (error) {
-    next(error);
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
   }
 };
 
 //get FRIENDS list
 exports.getFriends = async (req, res, next) => {
   const user = req.user;
-  //   console.log(user);
   try {
-    if (!user) {
-      res.status(404).json("No user found");
-      throw new Error("No user found!");
-    }
-
     //get all friend from db => find userID = friend_one and accepted =1
     const friendsListInfo = [];
     //user you send request to friend
@@ -144,15 +139,17 @@ exports.getFriends = async (req, res, next) => {
         const result = await db.query(
           `SELECT id,email FROM users WHERE id = ${friend.friend_one}`
         );
-        // console.log("info", result[0]);
         const info = result[0][0];
         friendsListInfo.push(info);
       }
     }
 
-    res.json({ friendsListInfo, user });
-  } catch (error) {
-    next(error);
+    return res.status(200).json({ friendsListInfo, user });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
   }
 };
 
@@ -160,10 +157,6 @@ exports.getFriends = async (req, res, next) => {
 exports.getFriendRequest = async (req, res, next) => {
   const user = req.user;
   try {
-    if (!user) {
-      res.status(404).json("No user found");
-      throw new Error("No user found!");
-    }
     const result = await db.query(
       `SELECT friend_one FROM friends WHERE friend_two = ${user.id} AND accepted = 0`
     );
@@ -175,18 +168,19 @@ exports.getFriendRequest = async (req, res, next) => {
     }
 
     const requestsList = [];
-    //  console.log("friends", friends);
     //get info tu id friend lay duoc
     for (let request of requests) {
       const result = await db.query(
         `SELECT email, id FROM users WHERE id = ${request.friend_one}`
       );
-      // console.log("info", result[0]);
       const info = result[0][0];
       requestsList.push(info);
     }
-    res.json({ requestsList });
-  } catch (error) {
-    next(error);
+    return res.status(200).json({ requestsList });
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
   }
 };

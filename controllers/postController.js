@@ -1,15 +1,9 @@
 const db = require("../util/database");
 
-//owner get my post
+//owner get my post (MY POSTS)
 exports.getPosts = async (req, res, next) => {
   const userId = req.user.id;
-  //   console.log(userId);
   try {
-    if (!userId) {
-      res.status(404).json("No users found");
-      throw new Error("No user found !");
-    }
-
     const posts = await db.query(
       //PIVOT LA BANG LAY RA POST CUA USER, JOIN VOI USERS DE LAY RA THONG TIN USER
       "SELECT users.email, users.last_name, users.first_name, PIVOT.* FROM (" +
@@ -20,7 +14,7 @@ exports.getPosts = async (req, res, next) => {
     );
 
     if (!posts) {
-      res.json({ message: "No posts found" });
+      return res.status(200).json({ message: "No posts found" });
     }
     const result = posts[0];
     for (let i = 0; i < result.length; i++) {
@@ -45,9 +39,12 @@ exports.getPosts = async (req, res, next) => {
       }
     }
     //  console.log(result);
-    return res.json(result);
-  } catch (error) {
-    next(error);
+    return res.status(200).json(result);
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
   }
 };
 
@@ -59,10 +56,6 @@ exports.createPost = async (req, res, next) => {
   const imageIds = [];
 
   try {
-    if (!userId) {
-      res.status(404).json("No users found");
-      throw new Error("No user found !");
-    }
     //luu content vao db
     const response = await db.query(
       "INSERT INTO posts (user_id, content, privacy) Values (?,?,?)",
@@ -70,7 +63,6 @@ exports.createPost = async (req, res, next) => {
     );
     //lay ra post ID
     const postId = response[0].insertId;
-    //  console.log(postId);
     //neu co anh thi luu anh vao db
     if (files) {
       for (let i = 0; i < files.length; i++) {
@@ -84,15 +76,17 @@ exports.createPost = async (req, res, next) => {
     }
     //lay ra imageID cua anh vua luu de them vao db
 
-    //  console.log("imageIds", imageIds);
     await db.query("UPDATE posts SET image_id = ? WHERE id = ?", [
       imageIds.join(","),
       postId,
     ]);
 
-    res.json("ok");
-  } catch (error) {
-    next(error);
+    return res.status(200).json("Post created !");
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
   }
 };
 
@@ -141,16 +135,12 @@ exports.getMorePosts = async (userId, lastPostId) => {
   }
 };
 
+//FRIEND'S POSTS
 exports.getUserPost = async (req, res, next) => {
   const userId = req.user.id;
   const ownerPostId = req.params.id; //Lay ra id owner post
 
   try {
-    if (!userId) {
-      res.status(404).json("No users found");
-      throw new Error("No user found !");
-    }
-
     //privacy = 0 : public || privacy = 2 va la ban be cua nhau
     const posts = await db.query(
       "SELECT users.email, users.last_name, users.first_name, PIVOT.* FROM (SELECT * FROM posts WHERE user_id = " +
@@ -171,7 +161,7 @@ exports.getUserPost = async (req, res, next) => {
     );
 
     if (!posts) {
-      return res.json({ message: "No posts found" });
+      return res.status(200).json({ message: "No posts found" });
     }
     const result = posts[0];
     for (let i = 0; i < result.length; i++) {
@@ -196,12 +186,16 @@ exports.getUserPost = async (req, res, next) => {
       }
     }
     //  console.log(result);
-    return res.json(result);
-  } catch (error) {
-    next(error);
+    return res.status(200).json(result);
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
   }
 };
 
+//MORE FRIEND"S POST
 exports.getMoreUserPosts = async (userId, ownerPostId, lastPostId) => {
   try {
     const posts = await db.query(
@@ -260,11 +254,7 @@ exports.getMoreUserPosts = async (userId, ownerPostId, lastPostId) => {
   }
 };
 
-//GET NEWSFEED
-//BAI VIET CUA MINH
-// TIM KIEM BAN BE CUA MINH
-//TIM BAI VIET TU ID BAN BE DO
-
+//MY WALL => hien thi my post va friend post
 exports.getNewsFeed = async (req, res, next) => {
   const userId = req.user.id;
   try {
@@ -293,6 +283,7 @@ exports.getNewsFeed = async (req, res, next) => {
 
     const posts = await db.query(
       //PIVOT LA BANG LAY RA POST CUA USER, JOIN VOI USERS DE LAY RA THONG TIN USER
+      //BAI VIET CUA CHINH MINH
       "SELECT users.email, users.last_name, users.first_name, PIVOT.* FROM ( SELECT * FROM posts WHERE user_id = " +
         userId +
         //BAI VIET CUA BAN BE O CHE DO PUBLIC HOAC BAN BE O CHE DO BAN BE
@@ -306,7 +297,7 @@ exports.getNewsFeed = async (req, res, next) => {
     );
 
     if (!posts) {
-      return { message: "No posts found" };
+      return res.status(200).json({ message: "No posts found" });
     }
     const result = posts[0];
     for (let i = 0; i < result.length; i++) {
@@ -330,15 +321,17 @@ exports.getNewsFeed = async (req, res, next) => {
         result[i]["imageArray"] = imageArray;
       }
     }
-    //  console.log(result);
-    //  return result;
 
-    return res.json(result);
-  } catch (error) {
-    next(error);
+    return res.status(200).json(result);
+  } catch (err) {
+    if (!err.statusCode) {
+      err.statusCode = 500;
+    }
+    next(err);
   }
 };
 
+//GET MORE MY WALL
 exports.getMoreNewsFeed = async (userId, lastPostId) => {
   try {
     //TIM LIST BAN BE
@@ -411,3 +404,5 @@ exports.getMoreNewsFeed = async (userId, lastPostId) => {
     console.log(error);
   }
 };
+
+//FRIENDS WALL => THAY DUOC BAI VIET CUA MINH< CUA BAN BE

@@ -5,22 +5,24 @@ const jwt = require("jsonwebtoken");
 exports.postReg = async (req, res, next) => {
   const email = req.body.email;
   const password = req.body.password;
-
+  const firstName = req.body.firstName;
+  const lastName = req.body.lastName;
   try {
     const result = await db.query("SELECT email FROM users");
     const emails = result[0];
     emails.forEach((element) => {
       if (element.email === email) {
-        res.json("Email is already exist !");
-        throw new Error("Email exist !");
+        const error = new Error("Email is already exists");
+        error.statusCode = 400;
+        throw error;
       }
     });
     const hashedPassword = await bcrypt.hash(password, 12);
-    await db.query("INSERT INTO users (email, password) VALUES (?, ?)", [
-      email,
-      hashedPassword,
-    ]);
-    res.json("Sign up success !");
+    await db.query(
+      "INSERT INTO users (email, password, first_name, last_name) VALUES (?, ?,?,?)",
+      [email, hashedPassword, firstName, lastName]
+    );
+    res.status(201).json({ message: "Sign up success !" });
   } catch (err) {
     if (!err.statusCode) {
       err.statusCode = 500;
@@ -42,8 +44,9 @@ exports.postLogin = async (req, res, next) => {
     );
     const emails = result[0];
     if (emails.length == 0) {
-      res.json("Email is wrong!");
-      throw new Error("Email is wrong!");
+      const error = new Error("Email is wrong !");
+      error.statusCode = 400;
+      throw error;
     }
 
     const userPass = await db.query(
@@ -66,8 +69,9 @@ exports.postLogin = async (req, res, next) => {
         token: token,
       });
     } else {
-      res.json("Password is wrong !");
-      throw new Error("Password is wrong !");
+      const error = new Error("Password is wrong !");
+      error.statusCode = 400;
+      throw error;
     }
   } catch (err) {
     if (!err.statusCode) {
